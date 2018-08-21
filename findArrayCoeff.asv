@@ -1,0 +1,98 @@
+function [w_1] = findArrayCoeff(alp, bet, num_ants, phase_rot, v_vec, v_cap, v_mat, user_doa = 0, int_doa = 0, temp_, start_angle = 1, end_angle = 360, type)
+    % MVDR only
+    if type == 'mvdr_only'
+        cvx_begin quiet
+            variables w(num_ants*2)
+                min_val = [temp_*w];
+                minimize norm(min_val,2)
+                subject to
+                    for p = start_angle:end_angle
+                        if p == user_doa
+                            v_vec(p,:)*w == num_ants
+                            v_cap(p,:)*w == 0
+                        elseif ismember(p,int_doa)
+                            temp_v(:,:) = v_mat(p,:,:);
+                            norm(temp_v*w,2) <= u;
+                        else 
+                            if norm(p - user_doa,1) >= beamwidth/2
+                                temp_v(:,:) = v_mat(p,:,:);
+                                norm(temp_v*w,2) <= e;
+                            end
+                        end
+                    end
+        cvx_end
+        w_1 = w(1:num_ants) + 1i*w(num_ants+1:end);
+        e_1 = max(abs(phase_rot([1:user_doa-20,user_doa+20:360],:)*conj(w_1)));
+    % MVDR with sidelobe suppression
+    elseif type == 'side_supp'
+        cvx_begin %quiet
+            variables w(num_ants*2) e
+    %             temp(:,:) = sqrtm(corr_mat(:,:,i));
+    %             temp_ = [real(temp),-imag(temp);imag(temp),real(temp)];
+                min_val = [temp_*w;alp*e];
+                minimize norm(min_val,2)
+                subject to
+                    for p = start_angle:end_angle
+                        if p == user_doa
+                            v_vec(p,:)*w == num_ants
+                            v_cap(p,:)*w == 0
+                        elseif norm(p - user_doa,1) >= beamwidth/2
+                            temp_v(:,:) = v_mat(p,:,:);
+                            norm(temp_v*w,2) <= e;
+                            end
+                        end
+                    end
+        cvx_end
+        w_1 = w(1:num_ants) + 1i*w(num_ants+1:end);
+    
+    elseif type == 'side_and_int_supp'
+        % MVDR with sidelobe and interference suppression
+        alp = 1;
+        cvx_begin %quiet
+            variables w(num_ants*2) e u
+    %             temp(:,:) = sqrtm(corr_mat(:,:,i));
+    %             temp_ = [real(temp),-imag(temp);imag(temp),real(temp)];
+                min_val = [temp_*w;alp*e;bet*u];
+                minimize norm(min_val,2)
+                subject to
+                    for p = start_angle:end_angle
+                        if p == user_doa
+                            v_vec(p,:)*w == num_ants
+                            v_cap(p,:)*w == 0
+                        elseif ismember(p,int_doa)
+                            temp_v(:,:) = v_mat(p,:,:);
+                            norm(temp_v*w,2) <= u;
+                        else 
+                            if norm(p - user_doa,1) >= beamwidth/2
+                                temp_v(:,:) = v_mat(p,:,:);
+                                norm(temp_v*w,2) <= e;
+                            end
+                        end
+                    end
+        cvx_end
+        w_1 = w(1:num_ants) + 1i*w(num_ants+1:end);
+    
+    elseif type == 'int_supp'
+        % MVDR with sidelobe and interference suppression
+        alp = 1;
+        cvx_begin %quiet
+            variables w(num_ants*2) e u
+    %             temp(:,:) = sqrtm(corr_mat(:,:,i));
+    %             temp_ = [real(temp),-imag(temp);imag(temp),real(temp)];
+                min_val = [temp_*w;alp*e;bet*u];
+                minimize norm(min_val,2)
+                subject to
+                    v_vec(user_doa,:)*w == num_ants
+                    v_cap(user_doa,:)*w == 0
+                    for p = [1:user_doa-20,user_doa+20:180]
+                        temp_v(:,:) = v_mat(p,:,:);
+                        norm(temp_v*w,2) <= e
+                    end
+                    for p = [240]
+                        temp_v(:,:) = v_mat(p,:,:);
+                        norm(temp_v*w,2) <= u;
+                    end
+        cvx_end
+        w_1 = w(1:num_ants) + 1i*w(num_ants+1:end);
+    end
+end
