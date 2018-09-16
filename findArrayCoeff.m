@@ -30,10 +30,10 @@ end
             minimize norm(min_val,2)
                 subject to
                     for p = array_of_angles
-                        if p == user_doa
+                        if ismember(p,user_doa)
                             v_vec(p,:)*w == num_ants;
                             v_cap(p,:)*w == 0;
-                        elseif norm(p - user_doa,1) >= beamwidth/2
+                        elseif all(abs(repmat(p,size(user_doa)) - user_doa) >= repmat(beamwidth/2,size(user_doa)))
                             temp_v(:,:) = v_mat(p,:,:);
                             norm(temp_v*w,2) <= e;
                         end
@@ -52,13 +52,13 @@ end
             minimize norm(min_val,2)
                 subject to
                     for p = array_of_angles
-                        if p == user_doa
+                        if ismember(p,user_doa) && ~ismember(p,int_doa)
                             v_vec(p,:)*w == num_ants;
                             v_cap(p,:)*w == 0;
                         elseif ismember(p,int_doa)
                             temp_v(:,:) = v_mat(p,:,:);
                             norm(temp_v*w,2) <= u;
-                        elseif norm(p - user_doa,1) >= beamwidth/2
+                        elseif all(abs(repmat(p,size(user_doa)) - user_doa) >= repmat(beamwidth/2,size(user_doa))) && ~ismember(p,int_doa)
                             temp_v(:,:) = v_mat(p,:,:);
                             norm(temp_v*w,2) <= e;
                         end
@@ -77,7 +77,7 @@ end
             minimize norm(min_val,2)
                 subject to
                     for p = array_of_angles
-                        if p == user_doa
+                        if ismember(p,user_doa) && ~ismember(p,int_doa)
                             v_vec(p,:)*w == num_ants;
                             v_cap(p,:)*w == 0;
                         elseif ismember(p,int_doa)
